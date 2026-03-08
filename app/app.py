@@ -32,7 +32,7 @@ def run_demo(prompt):
         preview_lines = []
         for item in token_data[:10]:
             preview_lines.append(
-                f"Step {item['step']} | Token: {repr(item['token_text'])} | Hidden size: {len(item['hidden_state'])} | SEP: {item['sep_score']} | Shift: {item['hallushift_score']}"
+                f"Step {item['step']} | Token: {repr(item['token_text'])} | Hidden size: {len(item['hidden_state'])} | SEP: {item['sep_score']} | Shift: {item['hallushift_score']} | Risk: {item['final_risk_score']} | Label: {item['risk_label']}"
             )
 
         token_preview = "\n".join(preview_lines) if preview_lines else "No token data generated."
