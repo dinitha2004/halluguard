@@ -9,6 +9,7 @@ import gradio as gr
 from db.database import init_db, save_run
 from models.generator import generate_with_hidden_states
 from models.eat import build_highlighted_response
+from models.aggregator import build_risky_spans
 
 init_db()
 
@@ -21,12 +22,14 @@ def run_demo(prompt):
             "Please enter a prompt.",
             "No database record saved.",
             "No token preview.",
-            "<div>Please enter a prompt.</div>"
+            "<div>Please enter a prompt.</div>",
+            "No span preview."
         )
 
     try:
         response, token_data = generate_with_hidden_states(prompt)
         highlighted_response = build_highlighted_response(token_data)
+        spans = build_risky_spans(token_data, min_label="MEDIUM")
 
         run_id = save_run(
             prompt=prompt,
@@ -43,22 +46,31 @@ def run_demo(prompt):
             )
 
         token_preview = "\n".join(preview_lines) if preview_lines else "No token data generated."
+
+        span_lines = []
+        for i, span in enumerate(spans, start=1):
+            span_lines.append(
+                f"Span {i} | Text: {repr(span['span_text'])} | Steps: {span['start_step']}-{span['end_step']} | Avg risk: {span['avg_risk']} | Max risk: {span['max_risk']} | Label: {span['span_label']}"
+            )
+
+        span_preview = "\n".join(span_lines) if span_lines else "No candidate spans detected."
         status = f"Saved successfully to SQLite. Run ID: {run_id}"
 
-        return response, status, token_preview, highlighted_response
+        return response, status, token_preview, highlighted_response, span_preview
 
     except Exception as e:
         return (
             f"Error: {str(e)}",
             "Database save skipped because generation failed.",
             "No token preview.",
-            f"<div>Error: {str(e)}</div>"
+            f"<div>Error: {str(e)}</div>",
+            "No span preview."
         )
 
 
 with gr.Blocks(title="HalluGuard Prototype") as demo:
     gr.Markdown("# HalluGuard Prototype")
-    gr.Markdown("Llama 3.2 + SQLite + Gradio + Token Highlighting")
+    gr.Markdown("Llama 3.2 + SQLite + Gradio + Token Highlighting + Span Aggregation")
 
     prompt_box = gr.Textbox(
         label="Enter your prompt",
@@ -86,10 +98,15 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
     gr.Markdown("### Highlighted Risk View")
     highlight_box = gr.HTML()
 
+    span_box = gr.Textbox(
+        label="Span Aggregator Preview",
+        lines=8
+    )
+
     run_button.click(
         fn=run_demo,
         inputs=prompt_box,
-        outputs=[answer_box, status_box, token_box, highlight_box]
+        outputs=[answer_box, status_box, token_box, highlight_box, span_box]
     )
 
 if __name__ == "__main__":
