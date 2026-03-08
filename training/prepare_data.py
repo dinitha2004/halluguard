@@ -1,4 +1,5 @@
 from models.generator import generate_with_hidden_states
+from models.aggregator import build_risky_spans
 
 prompt = "What is the capital of Japan?"
 
@@ -18,3 +19,19 @@ for item in token_data[:10]:
     print("Final risk score:", item["final_risk_score"])
     print("Risk label:", item["risk_label"])
     print("-" * 40)
+
+spans = build_risky_spans(token_data, min_label="MEDIUM")
+
+print("\nSPAN AGGREGATOR PREVIEW:\n")
+if spans:
+    for i, span in enumerate(spans, start=1):
+        print("Span:", i)
+        print("Text:", repr(span["span_text"]))
+        print("Steps:", f"{span['start_step']} to {span['end_step']}")
+        print("Token count:", span["token_count"])
+        print("Average risk:", span["avg_risk"])
+        print("Max risk:", span["max_risk"])
+        print("Span label:", span["span_label"])
+        print("=" * 50)
+else:
+    print("No candidate spans detected.")
