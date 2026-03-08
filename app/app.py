@@ -8,6 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
 import gradio as gr
 from db.database import init_db, save_run
 from models.generator import generate_with_hidden_states
+from models.eat import build_highlighted_response
 
 init_db()
 
@@ -16,10 +17,16 @@ def run_demo(prompt):
     prompt = prompt.strip()
 
     if not prompt:
-        return "Please enter a prompt.", "No database record saved.", "No token preview."
+        return (
+            "Please enter a prompt.",
+            "No database record saved.",
+            "No token preview.",
+            "<div>Please enter a prompt.</div>"
+        )
 
     try:
         response, token_data = generate_with_hidden_states(prompt)
+        highlighted_response = build_highlighted_response(token_data)
 
         run_id = save_run(
             prompt=prompt,
@@ -38,19 +45,20 @@ def run_demo(prompt):
         token_preview = "\n".join(preview_lines) if preview_lines else "No token data generated."
         status = f"Saved successfully to SQLite. Run ID: {run_id}"
 
-        return response, status, token_preview
+        return response, status, token_preview, highlighted_response
 
     except Exception as e:
         return (
             f"Error: {str(e)}",
             "Database save skipped because generation failed.",
-            "No token preview."
+            "No token preview.",
+            f"<div>Error: {str(e)}</div>"
         )
 
 
 with gr.Blocks(title="HalluGuard Prototype") as demo:
     gr.Markdown("# HalluGuard Prototype")
-    gr.Markdown("Llama 3.2 + SQLite + Gradio + TBG Preview")
+    gr.Markdown("Llama 3.2 + SQLite + Gradio + Token Highlighting")
 
     prompt_box = gr.Textbox(
         label="Enter your prompt",
@@ -62,7 +70,7 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
 
     answer_box = gr.Textbox(
         label="Model Response",
-        lines=8
+        lines=5
     )
 
     status_box = gr.Textbox(
@@ -75,10 +83,13 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
         lines=12
     )
 
+    gr.Markdown("### Highlighted Risk View")
+    highlight_box = gr.HTML()
+
     run_button.click(
         fn=run_demo,
         inputs=prompt_box,
-        outputs=[answer_box, status_box, token_box]
+        outputs=[answer_box, status_box, token_box, highlight_box]
     )
 
 if __name__ == "__main__":
