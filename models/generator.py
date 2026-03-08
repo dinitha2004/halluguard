@@ -1,5 +1,6 @@
 import torch
 from models.load_model import load_model
+from models.probe import compute_sep_score
 
 tokenizer, model, device = load_model()
 
@@ -60,13 +61,16 @@ def generate_with_hidden_states(prompt: str, max_new_tokens: int = 80):
             last_layer_hidden = outputs.hidden_states[-1][:, -1, :].detach().cpu()
             last_layer_hidden_list = last_layer_hidden[0].tolist()
 
+            sep_score = compute_sep_score(last_layer_hidden_list)
+
             next_token_text = tokenizer.decode(next_token_id[0], skip_special_tokens=False)
 
             token_data.append({
                 "step": step,
                 "token_id": int(next_token_id.item()),
                 "token_text": next_token_text,
-                "hidden_state": last_layer_hidden_list
+                "hidden_state": last_layer_hidden_list,
+                "sep_score": sep_score
             })
 
             generated_ids = torch.cat([generated_ids, next_token_id.to(device)], dim=1)
