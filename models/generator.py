@@ -2,6 +2,7 @@ import torch
 from models.load_model import load_model
 from models.probe import compute_sep_score
 from models.hallushift import compute_hallushift_score
+from models.aggregator import compute_final_token_risk, get_risk_label
 
 tokenizer, model, device = load_model()
 
@@ -65,6 +66,8 @@ def generate_with_hidden_states(prompt: str, max_new_tokens: int = 80):
 
             sep_score = compute_sep_score(last_layer_hidden_list)
             hallushift_score = compute_hallushift_score(last_layer_hidden_list, previous_hidden_state)
+            final_risk_score = compute_final_token_risk(sep_score, hallushift_score)
+            risk_label = get_risk_label(final_risk_score)
 
             next_token_text = tokenizer.decode(next_token_id[0], skip_special_tokens=False)
 
@@ -74,7 +77,9 @@ def generate_with_hidden_states(prompt: str, max_new_tokens: int = 80):
                 "token_text": next_token_text,
                 "hidden_state": last_layer_hidden_list,
                 "sep_score": sep_score,
-                "hallushift_score": hallushift_score
+                "hallushift_score": hallushift_score,
+                "final_risk_score": final_risk_score,
+                "risk_label": risk_label
             })
 
             generated_ids = torch.cat([generated_ids, next_token_id.to(device)], dim=1)
