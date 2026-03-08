@@ -6,7 +6,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
 import gradio as gr
-from db.database import init_db, save_run
+from db.database import init_db, save_run, get_recent_runs, get_run_details
 from models.generator import generate_with_hidden_states
 from models.eat import build_highlighted_response
 from models.aggregator import (
@@ -41,9 +41,9 @@ def run_demo(prompt):
         run_id = save_run(
             prompt=prompt,
             response_text=response,
-            overall_score=None,
-            token_scores=[],
-            spans=[]
+            overall_score=overall_score,
+            token_scores=token_data,
+            spans=spans
         )
 
         preview_lines = []
@@ -75,6 +75,78 @@ def run_demo(prompt):
             f"<div>Error: {str(e)}</div>",
             "No span preview."
         )
+    
+def load_recent_runs():
+    runs = get_recent_runs(limit=10)
+
+    if not runs:
+        return "No saved runs yet."
+
+    lines = []
+    for item in runs:
+        prompt_preview = item["prompt"].replace("\n", " ")
+        if len(prompt_preview) > 60:
+            prompt_preview = prompt_preview[:60] + "..."
+
+        lines.append(
+            f"Run {item['id']} | Score: {item['overall_score']} | Time: {item['created_at']} | Prompt: {prompt_preview}"
+        )
+
+    return "\n".join(lines)
+
+
+def inspect_saved_run(run_id_text):
+    run_id_text = str(run_id_text).strip()
+
+    if not run_id_text:
+        return "Please enter a run ID."
+
+    if not run_id_text.isdigit():
+        return "Run ID must be a number."
+
+    run_data = get_run_details(int(run_id_text))
+
+    if not run_data:
+        return f"No run found for ID {run_id_text}."
+
+    run = run_data["run"]
+    tokens = run_data["tokens"]
+    spans = run_data["spans"]
+
+    overall_score = run["overall_score"]
+    overall_label = get_overall_label(overall_score) if overall_score is not None else "UNKNOWN"
+
+    lines = [
+        f"Run ID: {run['id']}",
+        f"Created at: {run['created_at']}",
+        f"Overall score: {overall_score}",
+        f"Overall label: {overall_label}",
+        f"Prompt: {run['prompt']}",
+        f"Response: {run['response_text']}",
+        "",
+        "TOKENS:",
+    ]
+
+    for item in tokens[:10]:
+        lines.append(
+            f"Step {item['token_index']} | Token: {repr(item['token_text'])} | Final: {item['final_score']} | Label: {item['risk_label']}"
+        )
+
+    if len(tokens) > 10:
+        lines.append(f"... {len(tokens) - 10} more tokens")
+
+    lines.append("")
+    lines.append("SPANS:")
+
+    if spans:
+        for span in spans:
+            lines.append(
+                f"Text: {repr(span['span_text'])} | Steps: {span['start_token_index']}-{span['end_token_index']} | Avg: {span['avg_score']} | Max: {span['max_score']} | Label: {span['span_label']}"
+            )
+    else:
+        lines.append("No spans saved.")
+
+    return "\n".join(lines)
 
 
 with gr.Blocks(title="HalluGuard Prototype") as demo:
@@ -117,10 +189,45 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
         lines=8
     )
 
+    gr.Markdown("### Run History / Inspection")
+
+    history_box = gr.Textbox(
+        label="Recent Saved Runs",
+        lines=8,
+        value=load_recent_runs()
+    )
+
+    refresh_history_button = gr.Button("Refresh Run History")
+
+    run_id_box = gr.Textbox(
+        label="Enter Run ID to Inspect",
+        lines=1,
+        placeholder="Example: 1"
+    )
+
+    inspect_button = gr.Button("Inspect Run")
+
+    run_details_box = gr.Textbox(
+        label="Run Details",
+        lines=16
+    )
+
     run_button.click(
         fn=run_demo,
         inputs=prompt_box,
         outputs=[answer_box, status_box, overall_box, token_box, highlight_box, span_box]
+    )
+
+    refresh_history_button.click(
+        fn=load_recent_runs,
+        inputs=[],
+        outputs=history_box
+    )
+
+    inspect_button.click(
+        fn=inspect_saved_run,
+        inputs=run_id_box,
+        outputs=run_details_box
     )
 
 if __name__ == "__main__":
