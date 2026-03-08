@@ -79,3 +79,46 @@ def build_risky_spans(token_data, min_label="MEDIUM"):
         spans.append(_finalize_span(current_span))
 
     return spans
+
+def compute_overall_hallucination_score(token_data, spans):
+    usable_tokens = [
+        item for item in token_data
+        if not _is_special_token(item["token_text"])
+    ]
+
+    if not usable_tokens:
+        return 0.0
+
+    token_risks = [item["final_risk_score"] for item in usable_tokens]
+    avg_token_risk = sum(token_risks) / len(token_risks)
+    max_token_risk = max(token_risks)
+
+    span_avg_risk = 0.0
+    span_max_risk = 0.0
+
+    if spans:
+        span_avg_risk = sum(span["avg_risk"] for span in spans) / len(spans)
+        span_max_risk = max(span["max_risk"] for span in spans)
+
+    has_high_token = any(item["risk_label"] == "HIGH" for item in usable_tokens)
+    has_high_span = any(span["span_label"] == "HIGH" for span in spans)
+    has_medium_span = any(span["span_label"] == "MEDIUM" for span in spans)
+
+    base_token_score = (avg_token_risk + max_token_risk) / 2
+
+    if has_high_token or has_high_span:
+        overall_score = (0.65 * base_token_score) + (0.35 * span_max_risk)
+    elif has_medium_span:
+        overall_score = (0.35 * base_token_score) + (0.15 * span_avg_risk)
+    else:
+        overall_score = 0.20 * base_token_score
+
+    return round(clamp(overall_score), 4)
+
+
+def get_overall_label(overall_score):
+    if overall_score >= 0.75:
+        return "HIGH"
+    if overall_score >= 0.45:
+        return "MEDIUM"
+    return "LOW"

@@ -1,5 +1,9 @@
 from models.generator import generate_with_hidden_states
-from models.aggregator import build_risky_spans
+from models.aggregator import (
+    build_risky_spans,
+    compute_overall_hallucination_score,
+    get_overall_label,
+)
 
 prompt = "What is the capital of Japan?"
 
@@ -21,6 +25,8 @@ for item in token_data[:10]:
     print("-" * 40)
 
 spans = build_risky_spans(token_data, min_label="MEDIUM")
+overall_score = compute_overall_hallucination_score(token_data, spans)
+overall_label = get_overall_label(overall_score)
 
 print("\nSPAN AGGREGATOR PREVIEW:\n")
 if spans:
@@ -35,3 +41,7 @@ if spans:
         print("=" * 50)
 else:
     print("No candidate spans detected.")
+
+print("\nOVERALL HALLUCINATION PREVIEW:\n")
+print("Overall score:", overall_score)
+print("Overall label:", overall_label)
