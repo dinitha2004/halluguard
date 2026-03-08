@@ -9,7 +9,11 @@ import gradio as gr
 from db.database import init_db, save_run
 from models.generator import generate_with_hidden_states
 from models.eat import build_highlighted_response
-from models.aggregator import build_risky_spans
+from models.aggregator import (
+    build_risky_spans,
+    compute_overall_hallucination_score,
+    get_overall_label,
+)
 
 init_db()
 
@@ -21,6 +25,7 @@ def run_demo(prompt):
         return (
             "Please enter a prompt.",
             "No database record saved.",
+            "No overall score.",
             "No token preview.",
             "<div>Please enter a prompt.</div>",
             "No span preview."
@@ -30,6 +35,8 @@ def run_demo(prompt):
         response, token_data = generate_with_hidden_states(prompt)
         highlighted_response = build_highlighted_response(token_data)
         spans = build_risky_spans(token_data, min_label="MEDIUM")
+        overall_score = compute_overall_hallucination_score(token_data, spans)
+        overall_label = get_overall_label(overall_score)
 
         run_id = save_run(
             prompt=prompt,
@@ -55,13 +62,15 @@ def run_demo(prompt):
 
         span_preview = "\n".join(span_lines) if span_lines else "No candidate spans detected."
         status = f"Saved successfully to SQLite. Run ID: {run_id}"
+        overall_preview = f"Overall score: {overall_score} | Overall label: {overall_label}"
 
-        return response, status, token_preview, highlighted_response, span_preview
+        return response, status, overall_preview, token_preview, highlighted_response, span_preview
 
     except Exception as e:
         return (
             f"Error: {str(e)}",
             "Database save skipped because generation failed.",
+            "No overall score.",
             "No token preview.",
             f"<div>Error: {str(e)}</div>",
             "No span preview."
@@ -90,6 +99,11 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
         lines=2
     )
 
+    overall_box = gr.Textbox(
+    label="Overall Hallucination Score",
+    lines=2
+)
+
     token_box = gr.Textbox(
         label="TBG Token Preview",
         lines=12
@@ -106,7 +120,7 @@ with gr.Blocks(title="HalluGuard Prototype") as demo:
     run_button.click(
         fn=run_demo,
         inputs=prompt_box,
-        outputs=[answer_box, status_box, token_box, highlight_box, span_box]
+        outputs=[answer_box, status_box, overall_box, token_box, highlight_box, span_box]
     )
 
 if __name__ == "__main__":
