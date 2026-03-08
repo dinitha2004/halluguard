@@ -14,4 +14,5 @@ for item in token_data[:10]:
     print("Token ID:", item["token_id"])
     print("Hidden state length:", len(item["hidden_state"]))
     print("SEP score:", item["sep_score"])
+    print("HalluShift score:", item["hallushift_score"])
     print("-" * 40)
