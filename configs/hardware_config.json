@@ -1,0 +1,19 @@
+{
+  "primary_device": "mps",
+  "fallback_device": "cpu",
+  "base_llm_usage": [
+    "inference",
+    "hidden_state_extraction",
+    "feature_generation"
+  ],
+  "allowed_probe_models": [
+    "logistic_regression",
+    "small_mlp"
+  ],
+  "disallowed_training_strategies": [
+    "full_llm_finetuning",
+    "large_lora_finetuning",
+    "distributed_training"
+  ],
+  "hardware_note": "Use lightweight probe training only on local Mac hardware."
+}
