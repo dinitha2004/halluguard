@@ -1,0 +1,13 @@
+{
+  "train_ratio": 0.70,
+  "val_ratio": 0.15,
+  "test_ratio": 0.15,
+  "split_unit": "sample",
+  "random_seed": 42,
+  "leakage_rule": "same response cannot appear across splits",
+  "output_files": {
+    "train": "data/splits/train.jsonl",
+    "val": "data/splits/val.jsonl",
+    "test": "data/splits/test.jsonl"
+  }
+}
