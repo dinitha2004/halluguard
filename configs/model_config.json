@@ -1,0 +1,7 @@
+{
+  "base_model_name": "meta-llama/Llama-3.2-1B-Instruct",
+  "use_hidden_states": true,
+  "hidden_state_layer": "final",
+  "generation_mode": "autoregressive",
+  "device_preference": "mps"
+}
