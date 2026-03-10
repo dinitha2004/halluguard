@@ -1,0 +1,16 @@
+{
+  "token_metrics": ["precision", "recall", "f1", "accuracy"],
+  "span_metrics": ["precision", "recall", "f1"],
+  "overall_metrics": ["accuracy", "macro_f1"],
+  "primary_metrics": {
+    "token": "f1",
+    "span": "f1",
+    "overall": "macro_f1"
+  },
+  "final_reporting_split": "test",
+  "validation_usage": [
+    "threshold_tuning",
+    "model_selection",
+    "score_weight_tuning"
+  ]
+}
