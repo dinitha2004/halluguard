@@ -4,4 +4,10 @@ __pycache__/
 db/halluguard.db
 .env
 .DS_Store
-.ipynb_checkpoints/
+.ipynb_checkpoints/data/
+
+# Ignore large data files (too big for GitHub)
+data/
+*.jsonl
+*.json
+external_data/
